@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 from streaming.platform import StreamingPlatform
 from streaming.users import FreeUser, PremiumUser, FamilyAccountUser, FamilyMember
 from streaming.playlists import CollaborativePlaylist
+from streaming.sessions import ListeningSession
 from tests.conftest import FIXED_NOW, RECENT, OLD
 
 
@@ -55,10 +56,18 @@ class TestTotalListeningTime:
     # TODO: Add a test that verifies the correct value for a known time period.
     #       Calculate the expected total based on the fixture data in conftest.py.
     def test_known_period_value(self, platform: StreamingPlatform) -> None:
+        alice = platform.get_user("u1")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+
+        platform.record_session(ListeningSession("s1", alice, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s2", alice, t2, RECENT + timedelta(hours=1), 210))
+
         start = RECENT - timedelta(hours=1)
         end = FIXED_NOW
         result = platform.total_listening_time_minutes(start, end)
-        assert result == 0.0
+
+        assert result == 6.5
 
 
 # ===========================================================================
@@ -89,8 +98,18 @@ class TestAvgUniqueTracksPremium:
     #       average for premium users. You'll need to count unique tracks
     #       per premium user and calculate the average.
     def test_correct_value(self, platform: StreamingPlatform) -> None:
+        bob = platform.get_user("u2")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+        t3 = platform.get_track("t3")
+
+        platform.record_session(ListeningSession("s3", bob, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s4", bob, t1, RECENT + timedelta(hours=1), 180))
+        platform.record_session(ListeningSession("s5", bob, t2, RECENT + timedelta(hours=2), 210))
+        platform.record_session(ListeningSession("s6", bob, t3, OLD, 195))
+
         result = platform.avg_unique_tracks_per_premium_user(days=30)
-        assert result == 0.0
+        assert result == 2.0
 
 
 # ===========================================================================
@@ -114,8 +133,17 @@ class TestTrackMostDistinctListeners:
     # TODO: Add a test that verifies the correct track is returned.
     #       Count listeners per track from the fixture data.
     def test_correct_track(self, platform: StreamingPlatform) -> None:
+        alice = platform.get_user("u1")
+        bob = platform.get_user("u2")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+
+        platform.record_session(ListeningSession("s7", alice, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s8", bob, t1, RECENT + timedelta(hours=1), 180))
+        platform.record_session(ListeningSession("s9", bob, t2, RECENT + timedelta(hours=2), 210))
+
         result = platform.track_with_most_distinct_listeners()
-        assert result is None
+        assert result == t1
 
 
 # ===========================================================================
@@ -370,9 +398,30 @@ class TestUsersWhoCompletedAlbums:
 
     # TODO: Add tests that verify the correct users and albums are identified.
     def test_correct_users_identified(self, platform: StreamingPlatform) -> None:
+        alice = platform.get_user("u1")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+        t3 = platform.get_track("t3")
+
+        platform.record_session(ListeningSession("s10", alice, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s11", alice, t2, RECENT + timedelta(hours=1), 210))
+        platform.record_session(ListeningSession("s12", alice, t3, RECENT + timedelta(hours=2), 195))
+
         result = platform.users_who_completed_albums()
-        assert result == []
+
+        assert len(result) == 1
+        assert result[0][0] == alice
 
     def test_correct_album_titles(self, platform: StreamingPlatform) -> None:
+        alice = platform.get_user("u1")
+        t1 = platform.get_track("t1")
+        t2 = platform.get_track("t2")
+        t3 = platform.get_track("t3")
+
+        platform.record_session(ListeningSession("s13", alice, t1, RECENT, 180))
+        platform.record_session(ListeningSession("s14", alice, t2, RECENT + timedelta(hours=1), 210))
+        platform.record_session(ListeningSession("s15", alice, t3, RECENT + timedelta(hours=2), 195))
+
         result = platform.users_who_completed_albums()
-        assert result == []
+
+        assert result[0][1] == ["Digital Dreams"]

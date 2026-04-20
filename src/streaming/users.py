@@ -25,7 +25,7 @@ class User:
 
 
 class FreeUser(User):
-    pass
+    MAX_SKIPS_PER_HOUR = 6
 
 
 class PremiumUser(User):
